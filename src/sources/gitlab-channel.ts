@@ -19,7 +19,9 @@ export async function sendGitlab(host: Pick<SourceContext, 'commands'>, message:
   try {
     const notes = z.array(NoteSchema).parse(JSON.parse(await host.commands.run(gitlab.cli, ['api', `${path}?per_page=100&sort=desc`])))
     if (notes.some(note => (note.body ?? '').includes(marker))) return 'sent'
-    await host.commands.run(gitlab.cli, ['api', path, '--method', 'POST', '-f', `body=${message.text}\n\n${marker}`])
+    // Use the glab subcommand the safe wrapper allows; a raw POST API call is outside its allowlist.
+    const command = message.channel.address.kind === 'mr' ? 'mr' : 'issue'
+    await host.commands.run(gitlab.cli, [command, 'note', String(iid), '-R', gitlab.project, '--message', `${message.text}\n\n${marker}`])
     return 'sent'
   } catch (error) {
     if (gone(error)) return 'gone'

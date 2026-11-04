@@ -49,10 +49,10 @@ describe('GitLab Source', () => {
       text: 'Done', kind: 'reply' as const }
     const first = harness(path => path.includes('/notes?') ? [] : '{}')
     expect(await sendGitlab(first.ctx, message)).toBe('sent')
-    expect(first.calls.some(path => path.endsWith('/notes'))).toBe(true)
+    expect(first.calls).toContain('note')
     const second = harness(path => path.includes('/notes?') ? [{ ...note, body: `<!-- dsh-superagent:reply-1 -->` }] : '{}')
     expect(await sendGitlab(second.ctx, message)).toBe('sent')
-    expect(second.calls.some(path => path.endsWith('/notes'))).toBe(false)
+    expect(second.calls).not.toContain('note')
   })
   it('observes a merged MR and binds an agent MR to its ticket', () => {
     const mr = { iid: 7, title: 'Fix', description: '', state: 'opened', web_url: 'https://gitlab.example.com/acme/widgets/-/merge_requests/7',
