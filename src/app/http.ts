@@ -99,7 +99,7 @@ function setupView(runtime: HttpHost) {
   const resolved = runtime.configured() ? runtime.deployment : undefined
   return {
     machine: machineView(runtime.machine), problem: runtime.setupProblem ?? null, feishuProblem: runtime.feishuProblem ?? null, gitlabProblem: runtime.gitlabProblem ?? null,
-    accounts: resolved ? { repository: resolved.repository, agent: resolved.github?.login ?? null,
+    accounts: resolved ? { repository: resolved.repository, agent: resolved.github?.login ?? resolved.gitlab?.login ?? '',
       gitlab: resolved.gitlab ? { host: resolved.gitlab.host, project: resolved.gitlab.project, account: resolved.gitlab.login } : null,
       feishu: resolved.feishu ? { appId: resolved.feishu.appId, brand: resolved.feishu.brand, botId: resolved.feishu.botId, name: resolved.feishu.name } : null } : null,
   }
