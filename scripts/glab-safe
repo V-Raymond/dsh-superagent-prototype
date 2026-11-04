@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+"""A restricted glab for dsh-superagent: only read and safe-write GitLab operations.
+
+The wrapper resolves the real glab (GLAB_SAFE_REAL or the first glab on PATH outside this
+script's directory) and refuses anything outside the allowlist:
+
+  mr create/list/view/note
+  issue create/list/view/note
+  ci list/view/trace
+  repo view
+  auth status
+  config get/list
+  api with a read-only method (GET/HEAD/OPTIONS)
+  --version / --help
+
+It never logs arguments or tokens and exits 126 on a refused command.
+"""
+import os
+import sys
+
+ALLOWED = {
+    ("mr", "create"), ("mr", "list"), ("mr", "view"), ("mr", "note"),
+    ("issue", "create"), ("issue", "list"), ("issue", "view"), ("issue", "note"),
+    ("ci", "list"), ("ci", "view"), ("ci", "trace"),
+    ("repo", "view"),
+    ("auth", "status"),
+    ("config", "get"), ("config", "list"),
+}
+READ_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
+def words(args):
+    """Subcommand words, ignoring options and their values where the value is a separate token."""
+    out = []
+    skip = False
+    for arg in args:
+        if skip:
+            skip = False
+            continue
+        if arg in ("-R", "--repo", "--hostname", "-h", "--host"):
+            skip = True
+            continue
+        if arg.startswith("-"):
+            continue
+        out.append(arg)
+    return out
+
+
+def api_allowed(args):
+    """Allow only read-only api calls; a missing method means GET, and field flags are refused."""
+    method = "GET"
+    for i, arg in enumerate(args):
+        if arg in ("--method", "-X"):
+            if i + 1 >= len(args):
+                return False
+            method = args[i + 1].upper()
+        elif arg.startswith("--method="):
+            method = arg.split("=", 1)[1].upper()
+        elif arg in ("-f", "--field", "--form"):
+            return False
+    return method in READ_METHODS
+
+
+def allowed(args):
+    if "--help" in args or "-h" in args or "--version" in args:
+        return True
+    first = words(args)
+    if not first:
+        return False
+    if first[0] == "version":
+        return True
+    if first[0] == "api":
+        return api_allowed(args)
+    return len(first) >= 2 and (first[0], first[1]) in ALLOWED
+
+
+def real_glab():
+    explicit = os.environ.get("GLAB_SAFE_REAL")
+    if explicit:
+        return explicit
+    own = os.path.realpath(__file__)
+    for directory in os.environ.get("PATH", "").split(os.pathsep):
+        candidate = os.path.join(directory, "glab")
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK) and os.path.realpath(candidate) != own:
+            return candidate
+    return None
+
+
+def main():
+    args = sys.argv[1:]
+    if not allowed(args):
+        sys.stderr.write("glab-safe: refused by the dsh-superagent allowlist\n")
+        return 126
+    glab = real_glab()
+    if not glab:
+        sys.stderr.write("glab-safe: real glab not found; set GLAB_SAFE_REAL\n")
+        return 127
+    os.execv(glab, [glab, *args])
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
