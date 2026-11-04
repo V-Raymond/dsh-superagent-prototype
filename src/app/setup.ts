@@ -16,6 +16,8 @@ export interface SetupHost {
 const setupFields = (settings: Settings) =>
   JSON.stringify(Object.entries(SETUP_FIELDS).map(([id, keys]) => keys.map(key => settings.sources[id]?.config[key] ?? '')))
 export const setupChanged = (before: Settings, after: Settings): boolean => setupFields(before) !== setupFields(after)
+const sourceNamed = (config: Record<string, unknown> | undefined, keys: readonly string[]): boolean =>
+  !!config && keys.some(key => typeof config[key] === 'string' && (config[key] as string).trim() !== '')
 
 /**
  * Resolves the target repository, GitHub account, and optional Feishu bot by probing CLIs, then writes and applies the isolated git and shim environment used by worker processes.
@@ -61,6 +63,7 @@ export class Setup {
   /** Verify account CLIs for a modified source block before saving, ignoring setup errors belonging to other blocks. */
   async checkAccounts(block: SettingsBlock, settings: Settings): Promise<void> {
     const { machine } = this.host
+    if (block === 'source:github' && !sourceNamed(settings.sources.github?.config, ['repository', 'cli'])) return
     const check = block === 'source:feishu' ? resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe())
       : block === 'source:gitlab' ? resolveGitlab(machine, settings.sources.gitlab?.config, this.probe())
       : resolveDeployment(machine, settings.sources.github?.config, this.probe())
@@ -78,7 +81,8 @@ export class Setup {
   private async resolve(settings: Settings): Promise<Deployment> {
     const { context, machine, lifetime } = this.host
     const probe = this.probe()
-    const deployment = await resolveDeployment(machine, settings.sources.github?.config, probe)
+    const github = sourceNamed(settings.sources.github?.config, ['repository', 'cli'])
+      ? await resolveDeployment(machine, settings.sources.github?.config, probe) : undefined
     const feishu = await resolveFeishuBot(machine, settings.sources.feishu?.config, probe).catch((error: unknown) => {
       if (!(error instanceof SetupError)) throw error
       this.feishuProblem = error.problem
@@ -91,7 +95,9 @@ export class Setup {
       context.logger.warn('dsh-superagent leaves GitLab out: %s', error.message)
       return undefined
     })
-    const resolved = { ...deployment, ...(gitlab ? { gitlab } : {}), ...(feishu ? { feishu } : {}) }
+    if (!github && !gitlab) throw new SetupError('sourceUnset')
+    const resolved = { ...machine, repository: github?.repository ?? gitlab!.project, ...(github ? { github: github.github } : {}),
+      ...(gitlab ? { gitlab } : {}), ...(feishu ? { feishu } : {}) }
     const machineProblem = (error: unknown): never => {
       if (error instanceof SetupError) throw error
       throw new SetupError('environmentFailed', { output: error instanceof Error ? error.message : String(error) })

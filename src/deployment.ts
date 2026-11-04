@@ -59,9 +59,9 @@ export const SETUP_FIELDS: Readonly<Record<string, readonly string[]>> = {
 }
 
 export interface Deployment extends Machine {
-  /** The GitHub repository (owner/name). GitLab deployments keep it as the setup anchor; the GitLab project is under `gitlab`. */
+  /** The primary repository path: the GitHub owner/name or the GitLab project path. */
   repository: string
-  github: { cli: string; login: string; noreply: string }
+  github?: { cli: string; login: string; noreply: string }
   gitlab?: GitlabProject
   feishu?: FeishuBot
 }

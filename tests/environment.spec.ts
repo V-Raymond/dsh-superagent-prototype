@@ -57,6 +57,15 @@ describe('worker shims', () => {
     expect(config).toContain('[credential "https://gitlab.example.com"]')
     expect(config).toContain('insteadOf = git@gitlab.example.com:')
   })
+  it('writes only the GitLab shim and credentials when no GitHub account is configured', async () => {
+    const glab = program(join(dir, 'glab-agent'), 'echo glab "$@"')
+    const deployment = testDeployment({ stateDir: dir, github: undefined, feishu: undefined,
+      gitlab: { host: 'https://gitlab.example.com', project: 'acme/widgets', cli: glab, login: 'agent-bot', noreply: 'agent@example.com' } })
+    await writeEnvironment(deployment, [])
+    expect(readdirSync(workerBin(dir)).sort()).toEqual(['glab', 'lark-cli'])
+    expect(readFileSync(workerGitConfig(dir), 'utf8')).not.toContain('github.com')
+    expect(readFileSync(workerGitConfig(dir), 'utf8')).toContain('[credential "https://gitlab.example.com"]')
+  })
   it('replace only what dsh-superagent wrote and refuse anything else in its places', async () => {
     await writeEnvironment(testDeployment({ stateDir: dir }), ['old-cli'])
     await writeEnvironment(testDeployment({ stateDir: dir }), [])

@@ -97,11 +97,12 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
   ].join('\n')
   const run = (program: string): string => `${withoutShims}\nexec ${shellQuote(program)} "$@"`
   const fail = (message: string): string => `echo ${shellQuote(message)} >&2\nexit 1`
-  await shim('gh', run(github.cli))
+  if (github) await shim('gh', run(github.cli))
   if (gitlab) await shim('glab', run(gitlab.cli))
   await shim('lark-cli', feishu ? run(feishu.cli) : fail('lark-cli is unavailable: this installation has no Feishu bot.'))
   for (const name of new Set(blockedCommands.filter(name => !WORKER_COMMANDS.includes(name)))) {
-    const hint = gitlab ? `use gh or glab, which act as ${github.login} and ${gitlab.login}.` : `use gh, which acts as ${github.login}.`
+    const hint = github && gitlab ? `use gh or glab, which act as ${github.login} and ${gitlab.login}.`
+      : github ? `use gh, which acts as ${github.login}.` : gitlab ? `use glab, which acts as ${gitlab.login}.` : 'this installation has no Source CLI.'
     await shim(name, fail(`${name} is blocked in this installation; ${hint}`))
   }
   for (const name of before) if (!kept.has(name)) await unlink(join(dir, name))
@@ -110,8 +111,10 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
     // Make git refuse to commit without an explicit identity set by the worker instead of guessing from the operator's OS user.
     '[user]', '\tuseConfigOnly = true',
     '[credential]', '\thelper =',
-    '[credential "https://github.com"]', `\thelper = ${gitQuote(credentialHelper(github.cli))}`,
-    '[url "https://github.com/"]', '\tinsteadOf = git@github.com:', '\tinsteadOf = ssh://git@github.com/',
+    ...(github ? [
+      '[credential "https://github.com"]', `\thelper = ${gitQuote(credentialHelper(github.cli))}`,
+      '[url "https://github.com/"]', '\tinsteadOf = git@github.com:', '\tinsteadOf = ssh://git@github.com/',
+    ] : []),
     ...(gitlab ? [
       `[credential "${gitlab.host}"]`, `\thelper = ${gitQuote(credentialHelper(gitlab.cli))}`,
       `[url "${gitlab.host}/"]`, `\tinsteadOf = git@${new URL(gitlab.host).host}:`, `\tinsteadOf = ssh://git@${new URL(gitlab.host).host}`,
@@ -149,7 +152,7 @@ export async function verifyEnvironment(deployment: Pick<Deployment, 'github' | 
       AbortSignal.any([signal, AbortSignal.timeout(60_000)])).catch(() => '')).split('\0')
     if (helpers.join('\0') !== [`file:${workerGitConfig(stateDir)}`, credentialHelper(cli), ''].join('\0')) throw new SetupError('gitTooOld')
   }
-  await check('https://github.com', github.cli)
+  if (github) await check('https://github.com', github.cli)
   if (gitlab) await check(gitlab.host, gitlab.cli)
 }
 
