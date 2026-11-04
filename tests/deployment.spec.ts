@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Config, executable, machineOf, resolveDeployment, resolveFeishuBot, type Machine, type Probe } from '../src/deployment.ts'
+import { Config, executable, machineOf, resolveDeployment, resolveFeishuBot, resolveGitlab, type Machine, type Probe } from '../src/deployment.ts'
 import { gitEnv } from './fixtures/git.ts'
 
 const exec = promisify(execFile)
@@ -97,5 +97,24 @@ describe('setup', () => {
     await refuses('feishuNoBot')
     program(join(dir, 'bin', 'lark-cli'), 'echo "not configured" >&2; exit 1')
     await refuses('feishuCliFailed', { output: expect.stringContaining('not configured') })
+  })
+  it('reads the GitLab project and agent account from the GitLab CLI, or leaves GitLab out when it names no host', async () => {
+    expect(await resolveGitlab(machine(), {}, probe, path)).toBeUndefined()
+    const glab = program(join(dir, 'bin', 'glab'), `case "$*" in
+  "api user") echo '{"id":7,"username":"agent-bot","commit_email":"agent@example.com"}' ;;
+  "api projects/acme%2Fwidgets") echo '{"path_with_namespace":"acme/widgets","permissions":{"project_access":{"access_level":30}}}' ;;
+  *) echo 'HTTP 404' >&2; exit 1 ;;
+esac`)
+    expect(await resolveGitlab(machine(), { host: 'https://gitlab.example.com', project: 'acme/widgets', cli: 'glab' }, probe, path))
+      .toEqual({ host: 'https://gitlab.example.com', project: 'acme/widgets', cli: glab, login: 'agent-bot', noreply: 'agent@example.com' })
+    const reader = program(join(dir, 'bin', 'glab-reader'), `case "$*" in
+  "api user") echo '{"id":7,"username":"agent-bot"}' ;;
+  "api projects/acme%2Fwidgets") echo '{"path_with_namespace":"acme/widgets","permissions":{"project_access":{"access_level":20}}}' ;;
+  *) exit 1 ;;
+esac`)
+    await expect(resolveGitlab(machine(), { host: 'gitlab.example.com', project: 'acme/widgets', cli: reader }, probe, path))
+      .rejects.toEqual(setupError('gitlab', 'gitlabReadOnly', { account: 'agent-bot', repository: 'acme/widgets' }))
+    await expect(resolveGitlab(machine(), { host: 'https://gitlab.example.com', project: 'acme/widgets' }, probe, path))
+      .rejects.toEqual(setupError('gitlab', 'gitlabCliUnset', {}))
   })
 })

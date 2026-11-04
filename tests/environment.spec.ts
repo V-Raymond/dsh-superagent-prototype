@@ -46,6 +46,17 @@ describe('worker shims', () => {
     expect([(await exec(join(bin, 'gh'), ['api', 'user'])).stdout, (await exec(join(bin, 'lark-cli'), ['im'])).stdout]).toEqual(['gh api user\n', 'lark im\n'])
     expect(readdirSync(bin)).not.toContain('git')
   })
+  it('shims glab and writes the GitLab host credentials when a GitLab project is configured', async () => {
+    const glab = program(join(dir, 'glab-agent'), 'echo glab "$@"')
+    const deployment = testDeployment({ stateDir: dir, gitlab: { host: 'https://gitlab.example.com', project: 'acme/widgets', cli: glab,
+      login: 'agent-bot', noreply: 'agent@example.com' } })
+    await writeEnvironment(deployment, [])
+    expect(readdirSync(workerBin(dir)).sort()).toEqual(['gh', 'glab', 'lark-cli'])
+    expect((await exec(join(workerBin(dir), 'glab'), ['mr', 'list'])).stdout).toBe('glab mr list\n')
+    const config = readFileSync(workerGitConfig(dir), 'utf8')
+    expect(config).toContain('[credential "https://gitlab.example.com"]')
+    expect(config).toContain('insteadOf = git@gitlab.example.com:')
+  })
   it('replace only what dsh-superagent wrote and refuse anything else in its places', async () => {
     await writeEnvironment(testDeployment({ stateDir: dir }), ['old-cli'])
     await writeEnvironment(testDeployment({ stateDir: dir }), [])

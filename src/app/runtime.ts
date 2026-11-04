@@ -190,9 +190,11 @@ export class Runtime extends Service implements SourceHost {
   get setupProblem(): SetupProblem | undefined { return this.setup.problem }
   /** Why the Feishu bot is unavailable even though the Feishu Source configures a CLI. */
   get feishuProblem(): SetupProblem | undefined { return this.setup.feishuProblem }
+  /** Why the GitLab project is unavailable even though the GitLab Source configures a project. */
+  get gitlabProblem(): SetupProblem | undefined { return this.setup.gitlabProblem }
   links(): LinkTarget {
     const resolved = this.setup.configured() ? this.setup.deployment : undefined
-    const links = resolved ? { repository: resolved.repository, ...(resolved.feishu ? { feishu: resolved.feishu } : {}) } : {}
+    const links = resolved ? { repository: resolved.repository, ...(resolved.gitlab ? { gitlab: resolved.gitlab } : {}), ...(resolved.feishu ? { feishu: resolved.feishu } : {}) } : {}
     return channel => this.sources.link(channel, links)
   }
   ticketEnvironment(ticket: Ticket): Variable[] {
