@@ -145,6 +145,19 @@ describe('Source registry', () => {
     expect(sources.channelAllowed(feishuChannel('oc_dm', 'om_1', true))).toBe(false)
     expect(sources.channelAllowed({ source: 'github', address: { number: '7' } })).toBe(true)
   })
+  it('routes pull facts through the pull adapter of the ticket\'s Source kind', () => {
+    const sources = new SourceRegistry(() => SettingsSchema.parse({}))
+    const message: OutboundMessage = { id: 'notice-1', channel: { source: 'pullprobe', thread: 'pullprobe:7', address: { number: '7' } },
+      text: 'merged', kind: 'notice' }
+    sources.register({ ...probe, kind: 'pullprobe', health: [], pull: {
+      read: async () => ({}), claim: () => undefined, of: () => 7, endNotices: () => [message],
+    } })
+    const ticket = { follows: [{ thread: 'pullprobe:7', own: true }] } as never
+    expect(sources.pullSource(ticket)).toBe('pullprobe')
+    expect(sources.pullOf(ticket)).toBe(7)
+    expect(sources.pullEndNotices(ticket, '', testDeployment())).toEqual([message])
+    expect(sources.pullSource({ follows: [] } as never)).toBe('pullprobe')
+  })
   it('delivers a reply to a direct message under the default settings', async () => {
     const sources = new SourceRegistry(() => SettingsSchema.parse({}))
     sources.register(feishuKind)

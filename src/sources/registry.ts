@@ -1,5 +1,6 @@
 /** Registry of installed Source kinds, their configured instances, and the Engine's SourceScope implementation. */
-import type { ChannelRef, OutboundMessage, ScopeResult, SourceScope, Trigger } from '../core/index.ts'
+import type { ChannelRef, OutboundMessage, ScopeResult, SourceScope, Ticket, Trigger } from '../core/index.ts'
+import type { Deployment } from '../deployment.ts'
 import type { Commands } from '../infra/commands.ts'
 import { HealthBoard, type HealthEntry } from '../infra/health.ts'
 import { AdmissionTableSchema, type Settings } from '../policy.ts'
@@ -106,6 +107,25 @@ export class SourceRegistry implements SourceScope {
     return { threads: [...new Set(found.flatMap(item => item.threads))], terms: [...new Set(found.flatMap(item => item.terms))] }
   }
   repliesTo(trigger: Trigger): string | undefined { return this.kinds.get(trigger.source)?.repliesTo?.(trigger) }
+  /** The Source kind whose pull adapter should handle a ticket: a followed pull's Source, else the only installed pull-capable kind. */
+  pullSource(ticket: Pick<Ticket, 'follows'>): string | undefined {
+    const followed = [...new Set((ticket.follows ?? []).map(item => item.thread.split(':', 1)[0]!))].find(source => this.kinds.get(source)?.pull)
+    if (followed) return followed
+    const candidates = [...this.kinds.values()].filter(kind => kind.pull)
+    return candidates.length === 1 ? candidates[0]!.kind : undefined
+  }
+  /** The pull number a ticket follows, from the first installed Source kind whose pull adapter claims it. */
+  pullOf(ticket: Pick<Ticket, 'follows'>): number | undefined {
+    for (const source of new Set((ticket.follows ?? []).map(item => item.thread.split(':', 1)[0]!))) {
+      const number = this.kinds.get(source)?.pull?.of(ticket)
+      if (number !== undefined) return number
+    }
+    return undefined
+  }
+  /** Terminal notices from every installed Source kind that has a pull adapter. */
+  pullEndNotices(ticket: Ticket, request: string, deployment: Deployment): OutboundMessage[] {
+    return [...this.kinds.values()].flatMap(kind => kind.pull?.endNotices(ticket, request, deployment) ?? [])
+  }
   threadContext(trigger: Trigger, settings = this.settings()): TriggerContext | undefined {
     const kind = this.kinds.get(trigger.source)
     const context = kind?.threadContext

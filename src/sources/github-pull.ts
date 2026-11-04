@@ -4,6 +4,7 @@ import { key, liveTicket, type Follow, type OutboundMessage, type ThreadFact, ty
 import type { Deployment } from '../deployment.ts'
 import { sameName } from '../infra/text.ts'
 import type { SourceContext } from './host.ts'
+import type { SourcePull } from './kind.ts'
 import { githubPage, SOURCE, UserSchema } from './github-trigger.ts'
 
 const PullSchema = z.looseObject({
@@ -102,4 +103,11 @@ export function pullEndNotices(ticket: Ticket, request: string, repository: stri
   // GitHub timelines and linked issues already show the merge or closure, so GitHub channels are skipped.
   return ticket.channels.filter(channel => channel.source !== SOURCE).map(channel => ({
     id: key('pr-terminal', String(number), channel.source, JSON.stringify(channel.address), outcome), channel, text, kind: 'notice', ticketId: ticket.id }))
+}
+/** GitHub pull-request lifecycle adapter, exposed through `SourceKind.pull`. */
+export const githubPull: SourcePull = {
+  read: (ctx, number, signal) => readPull(ctx, number, signal),
+  claim: (ctx, ticketId, pull) => claimPull(ctx, ticketId, pull as Pull),
+  of: ticket => pullOf(ticket),
+  endNotices: (ticket, request, deployment) => pullEndNotices(ticket, request, deployment.repository),
 }

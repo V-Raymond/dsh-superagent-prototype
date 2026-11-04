@@ -1,7 +1,7 @@
 /** SourceKind plugin contract: configuration schema, UI form fields, policy integration, channel adapter, and thread context reader. */
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type { z } from 'zod'
-import type { OutboundMessage, ScopeResult, Trigger } from '../core/index.ts'
+import type { OutboundMessage, ScopeResult, Ticket, Trigger } from '../core/index.ts'
 import type { Deployment } from '../deployment.ts'
 import type { Commands } from '../infra/commands.ts'
 import type { SourceContext, SourceHost } from './host.ts'
@@ -81,6 +81,17 @@ export interface TriggerContext {
   image(agent: Agent, commands: Commands, message: { id: string; text: string }, key: string, stateDir: string,
     signal: AbortSignal): Promise<unknown>
 }
+/** Pull-request-like lifecycle adapter for a Source whose Threads can decide a Ticket's end. */
+export interface SourcePull {
+  /** Reads a pull request or merge request by its source number. */
+  read(ctx: SourceContext, number: number, signal?: AbortSignal): Promise<unknown>
+  /** Binds `pull` to `ticketId`; returns a refusal message, or undefined when bound or not an error. */
+  claim(ctx: SourceContext, ticketId: string, pull: unknown): string | undefined
+  /** The pull number a ticket follows, if any. */
+  of(ticket: Pick<Ticket, 'follows'>): number | undefined
+  /** Outbound notices when a ticket ends with one of its pulls. */
+  endNotices(ticket: Ticket, request: string, deployment: Deployment): OutboundMessage[]
+}
 /** Pluggable source kind descriptor registered with SourceRegistry. */
 export interface SourceKind<C extends Record<string, unknown> = Record<string, unknown>> {
   /** Stable ID; a default instance with the same ID exists when none is stored. */
@@ -100,6 +111,8 @@ export interface SourceKind<C extends Record<string, unknown> = Record<string, u
   channel?: SourceChannel<C>
   /** Bounded context reader for assessments; assessments of a kind without `threadContext` read none. */
   threadContext?: ThreadContext<C>
+  /** Pull-request lifecycle adapter; kinds without `pull` have no claimable pulls. */
+  pull?: SourcePull
   /** Maps a search query to candidate Thread keys (such as `github:12`) and Trigger search terms (such as a Feishu `om_` ID). */
   find?(query: string): { threads: string[]; terms: string[] }
   /** Returns the ID of the Trigger whose message this Trigger replies to, when derivable without a network read. */
