@@ -14,7 +14,7 @@ The Execution environment gives the instance and project:
 ## Read
 
 - `glab api "projects/<url-encoded project>"` for project facts.
-- `glab api "projects/<url-encoded project>/issues?state=opened"` and ~`.../merge_requests?state=opened` for lists.
+- `glab api "projects/<url-encoded project>/issues?per_page=100"` and `glab api "projects/<url-encoded project>/merge_requests?per_page=100"` for lists.
 - `glab api "projects/<url-encoded project>/issues/<iid>/notes?per_page=100&sort=asc"` for a conversation.
 - `glab repo view`, or `glab api .../repository/files/<path>/raw?ref=<branch>`, for repository files and `.gitlab-ci.yml`.
 - `glab ci list`, `glab ci view <pipeline>`, and `glab ci trace <job>` for pipelines and job logs.

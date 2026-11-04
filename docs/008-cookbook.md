@@ -14,7 +14,7 @@ The example assumes this CLI contract:
 - `hookq reply --conversation <id> --to <message id> --key <key> --text <text>` replies under a message, once per key. For a conversation that was deleted it fails with `{"error": {"code": 410, "message": "…"}}` on standard error.
 - `hookq thread --conversation <id> --root <message id> --json`, with `--after <cursor>` for a later page, prints a page of a thread, oldest first: `{"items": […], "next": "<cursor>"}`, without `next` on the last page.
 
-Put the kind and its plugin entry in `src/sources/webhook.ts`, following `src/sources/github.ts`. If the Source grows, split translation, Channel and polling code into separate modules as the Feishu Source does.
+Put the kind and its plugin entry in `src/sources/webhook.ts`, following `src/sources/github.ts` or the GitLab Source (`src/sources/gitlab.ts`). If the Source grows, split translation, Channel and polling code into separate modules as the Feishu and GitLab Sources do.
 
 ### 1. Map the events onto the domain
 

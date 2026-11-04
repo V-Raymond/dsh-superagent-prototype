@@ -72,14 +72,19 @@ The prepare command and Executor instructions receive the same execution variabl
 | `DSH_SUPERAGENT_GITHUB_ACCOUNT`, `DSH_SUPERAGENT_GITHUB_COMMIT_EMAIL` | GitHub | The agent account and its commit email |
 | `DSH_SUPERAGENT_GITHUB_NUMBER`, `DSH_SUPERAGENT_GITHUB_PR_HEAD` | GitHub | The Issue or pull request that started the Ticket, and its head ref when it is a pull request |
 | `DSH_SUPERAGENT_FEISHU_BOT`, `DSH_SUPERAGENT_FEISHU_CHAT` | Feishu | The bot, and the chat that started the Ticket |
+| `DSH_SUPERAGENT_GITLAB_HOST`, `DSH_SUPERAGENT_GITLAB_PROJECT` | GitLab | The instance and project the Source watches |
+| `DSH_SUPERAGENT_GITLAB_ACCOUNT`, `DSH_SUPERAGENT_GITLAB_COMMIT_EMAIL` | GitLab | The agent account and its commit email |
+| `DSH_SUPERAGENT_GITLAB_NUMBER`, `DSH_SUPERAGENT_GITLAB_MR_HEAD` | GitLab | The Issue or Merge Request that started the Ticket, and its head ref for an MR |
 
 Ticket-specific values come from its directory and originating Trigger. Other values come from the current deployment settings. Only the panel can change execution environment settings; text sent to the main Session cannot change the configured shell command.
 
-Workers reach GitHub through the agent account's `gh` and Feishu through the bot's `lark-cli`. Blocked commands fail when invoked by name.
+Workers reach GitHub through the agent account's `gh`, GitLab through the restricted `glab` wrapper, and Feishu through the bot's `lark-cli`. Blocked commands fail when invoked by name. The GitLab wrapper refuses merge, approve, tag, release, and every write outside its allowlist.
 
 These wrappers and directories establish defaults, not a security boundary. A worker can still execute a program by absolute path.
 
 ## Merging
+
+For GitLab, the agent only opens and comments on Merge Requests; the wrapper refuses merge and approve. A person merges in GitLab, and the Source observes the merged or closed state to end the Ticket.
 
 Auto-merge is governed by the **Delivery requirements** prompt. The host has no merge-specific decision logic.
 
@@ -184,7 +189,7 @@ A message with failed attempts is a system problem until it goes out or is withd
 
 A message is dropped only when its Source no longer listens to the conversation, or when the Source answers that the conversation can never receive it; while its Source is off, it waits.
 
-The Sources answer that for a deleted Issue or a locked conversation on GitHub, and for a recalled message or one Feishu no longer finds on Feishu.
+The Sources answer that for a deleted Issue, a locked conversation on GitHub, a deleted or inaccessible GitLab Issue or Merge Request, and for a recalled message or one Feishu no longer finds on Feishu.
 
 A reply to a review comment that no longer exists goes to the pull request's conversation instead.
 

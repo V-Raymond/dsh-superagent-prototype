@@ -34,21 +34,21 @@ Ask in this order, one per message, following the flow of work in [docs/001-doma
 
 **Sources: where requests come from.**
 
-1. **Sources.** Should the agent take requests from GitHub only, or also from Feishu chats? [GitHub only, unless the team works in Feishu.]
-2. **Repository.** Which github.com repository should the agent work on, as `owner/name`?
-3. **Agent account.** Which GitHub user account will the agent act as? [A dedicated account, never the operator's own: everything the agent writes appears under this name.] It may not exist yet; creating it is an operator step.
+1. **Sources.** Should the agent take requests from GitHub, GitLab, or also Feishu chats? [GitHub only, unless the team works in GitLab or Feishu.]
+2. **Repository.** Which repository should the agent work on? On GitHub, `owner/name`; on GitLab, the instance origin (for example `https://gitlab.example.com`) and the project path (`group/subgroup/project`).
+3. **Agent account.** Which account will the agent act as, on GitHub or GitLab? [A dedicated account, never the operator's own: everything the agent writes appears under this name.] It may not exist yet; creating it is an operator step.
 4. With Feishu: **which chats,** by name? The agent looks up their ids after the bot is configured.
 
 **Policy: who may ask for work.**
 
-5. **On GitHub.** Which GitHub logins may ask the agent for work? [Only `<operator login>`: the agent acts only for people on this list, and a short list keeps the team's noise low while the operator learns how the agent behaves.]
+5. **On the Source.** Which GitHub logins or GitLab usernames may ask the agent for work? [Only `<operator login>`: the agent acts only for people on this list, and a short list keeps the team's noise low while the operator learns how the agent behaves.]
 6. With Feishu: **who may ask in Feishu?** [Everyone in the first chat, kept in sync with its members.]
 
 **Execution: what the agent does with a Ticket.**
 
 7. **Checkout.** Which local clone of the repository should each Ticket check out from? [A new clone under `~/src/<name>`.]
 8. **Commit identity.** Who should the agent's commits name as author? [The agent account, so its work is visibly its own.] Another identity, such as the operator's, goes into the Delivery requirements prompt section.
-9. **Auto-merge.** Should the agent enable auto-merge on its own pull requests once they are ready and approved? [No: people merge until the agent's pull requests have been right for a while.] The agent never enables it as the agent account, so with yes it needs the GitHub CLI of another account that may merge: ask the operator to sign one in among the operator steps, and name it in Delivery requirements. With no, remove the auto-merge paragraph from Delivery requirements.
+9. **Auto-merge.** On GitHub only: should the agent enable auto-merge on its own pull requests once they are ready and approved? GitLab Merge Requests are never merged or approved by the agent; a person merges them. [No: people merge until the agent's pull requests have been right for a while.] The agent never enables it as the agent account, so with yes it needs the GitHub CLI of another account that may merge: ask the operator to sign one in among the operator steps, and name it in Delivery requirements. With no, remove the auto-merge paragraph from Delivery requirements.
 
 Do not ask about values with a good default; list them in the plan instead:
 
