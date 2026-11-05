@@ -144,7 +144,11 @@ export async function pollRound(ctx: SourceContext, signal?: AbortSignal): Promi
   if (!gitlab || !config) return 60
   const started = new Date().toISOString()
   const since = ctx.state.get(KV.gitlab.since)
-  if (!since) { ctx.state.set(KV.gitlab.since, started); return config.pollSeconds }
+  if (!since) {
+    ctx.state.set(KV.gitlab.since, started)
+    ctx.report('gitlab', { state: 'ready', detail: `${gitlab.project}; waiting for the next poll`, at: started })
+    return config.pollSeconds
+  }
   const commands = ctx.commands.withSignal(signal)
   const base = `projects/${encodeURIComponent(gitlab.project)}`
   const suffix = `?updated_after=${encodeURIComponent(since)}&per_page=100`
@@ -180,5 +184,6 @@ export async function pollRound(ctx: SourceContext, signal?: AbortSignal): Promi
     }
   }
   ctx.state.set(KV.gitlab.since, started)
+  ctx.report('gitlab', { state: 'ready', detail: `${gitlab.project}; next poll ≥ ${config.pollSeconds}s`, at: started })
   return config.pollSeconds
 }

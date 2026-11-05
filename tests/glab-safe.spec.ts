@@ -21,6 +21,7 @@ describe('glab-safe', () => {
     expect(run('mr', 'list')).toMatchObject({ status: 0, stdout: 'FAKE:mr list\n' })
     expect(run('mr', 'note', '1', '--message', 'hi')).toMatchObject({ status: 0, stdout: 'FAKE:mr note 1 --message hi\n' })
     expect(run('api', 'projects/1', '--method', 'GET')).toMatchObject({ status: 0 })
+    expect(run('auth', 'git-credential')).toMatchObject({ status: 0, stdout: 'FAKE:auth git-credential\n' })
     expect(run('--version')).toMatchObject({ status: 0 })
   })
   it('refuses merge, approve, tag, release and write API calls', () => {

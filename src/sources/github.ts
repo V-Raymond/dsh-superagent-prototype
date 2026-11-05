@@ -279,7 +279,10 @@ async function pollBranchCi(ctx: SourceContext, round: Round): Promise<void> {
  * @returns the polling interval requested by GitHub, in seconds.
  */
 export async function pollRound(ctx: SourceContext, signal?: AbortSignal): Promise<number> {
-  if (!ctx.deployment.github) return 60
+  if (!ctx.deployment.github) {
+    ctx.report('github', health('paused', 'sourceOff'))
+    return 60
+  }
   const round = newRound(signal)
   const notified = await pollNotifications(ctx, round).then(value => ({ value }), (error: unknown) => ({ error }))
   await pollRepository(ctx, round)

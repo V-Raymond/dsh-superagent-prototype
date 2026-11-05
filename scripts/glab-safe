@@ -8,7 +8,7 @@ script's directory) and refuses anything outside the allowlist:
   issue create/list/view/note
   ci list/view/trace
   repo view
-  auth status
+  auth status/git-credential
   config get/list
   api with a read-only method (GET/HEAD/OPTIONS)
   --version / --help
@@ -23,7 +23,7 @@ ALLOWED = {
     ("issue", "create"), ("issue", "list"), ("issue", "view"), ("issue", "note"),
     ("ci", "list"), ("ci", "view"), ("ci", "trace"),
     ("repo", "view"),
-    ("auth", "status"),
+    ("auth", "status"), ("auth", "git-credential"),
     ("config", "get"), ("config", "list"),
 }
 READ_METHODS = {"GET", "HEAD", "OPTIONS"}
